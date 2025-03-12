@@ -1,0 +1,28 @@
+{
+    "name": "mantasruigys3000/simple-swagger",
+    "description": "Easy to use openapi doc generator",
+    "type": "library",
+    "license": "mit",
+    "autoload": {
+        "psr-4": {
+            "Mantasruigys3000\\SimpleSwagger\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Mantas",
+            "email": "mantasruigys101@gmail.com"
+        }
+    ],
+    "require": {
+        "illuminate/support": "^12.2",
+        "illuminate/console": "^12.2"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Mantasruigys3000\\SimpleSwagger\\providers\\SimpleSwaggerServiceProvider"
+            ]
+        }
+    }
+}
