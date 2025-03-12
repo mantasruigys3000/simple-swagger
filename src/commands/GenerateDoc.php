@@ -4,6 +4,7 @@ namespace Mantasruigys3000\SimpleSwagger\commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Route;
+use Mantasruigys3000\SimpleSwagger\Writer;
 
 class GenerateDoc extends Command
 {
@@ -17,5 +18,8 @@ class GenerateDoc extends Command
         {
             var_dump('Generating for '. $route->uri);
         }
+
+        $writer = new Writer();
+        $writer->write();
     }
 }

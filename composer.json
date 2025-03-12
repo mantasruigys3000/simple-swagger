@@ -24,5 +24,8 @@
                 "Mantasruigys3000\\SimpleSwagger\\providers\\SimpleSwaggerServiceProvider"
             ]
         }
+    },
+    "require-dev": {
+        "orchestra/testbench": "^10.1"
     }
 }
