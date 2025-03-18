@@ -16,7 +16,48 @@ class Writer
         // Gather openapi php array
 
         $data = [
-            'version' => '1.0.0',
+            'openapi' => '3.1.0',
+            'info' => [
+                'title' => 'swagger title',
+                'summary' => 'swagger summary',
+                'description' => 'swagger description',
+                'termsOfService' => 'https://tos.com',
+//                'contact' => [
+//                    // Contact Object
+//                    ''
+//                ],
+//                'license' => [
+//                    ''
+//                ],
+                'version' => '0.0.1',
+            ],
+            'servers' => [
+                ['url' => 'https://website.com']
+            ],
+            'paths' => [
+                '/users' => [
+                    'get' => [
+                        'summary' => 'Get all users',
+                        'description' => 'Get all users from the database',
+                        'tags' => [
+                            'users'
+                        ]
+                    ],
+                    'post' => [
+                        'summary' => 'Create a new user',
+                        'description' => 'Create a new user and store it in the database',
+                        'tags' => [
+                            'users',
+                        ]
+                    ]
+                ]
+            ],
+            'tags' =>[
+                ['name' => 'users','description' => 'User APIS'],
+            ],
+            'components' => [
+                ''
+            ]
         ];
 
         // Turn to yaml
