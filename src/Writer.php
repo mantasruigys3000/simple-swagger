@@ -1,80 +1,45 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Mantasruigys3000\SimpleSwagger;
 
 use Symfony\Component\Yaml\Yaml;
+use function Orchestra\Testbench\package_path;
 
 class Writer
 {
-    public function __construct()
+    public function __construct() {}
+
+    public function write() : string
     {
 
-    }
+        $examplePath = realpath(__DIR__ . "..\\..\\examples\\openapi-example.php");
+        $exampleArray = include $examplePath;
 
-    public function write()
-    {
+        // Get example data
+        // $example = include base_path('/examples/openapi-example.php');
+
         // Gather openapi php array
 
-        $data = [
-            'openapi' => '3.1.0',
-            'info' => [
-                'title' => 'swagger title',
-                'summary' => 'swagger summary',
-                'description' => 'swagger description',
-                'termsOfService' => 'https://tos.com',
-//                'contact' => [
-//                    // Contact Object
-//                    ''
-//                ],
-//                'license' => [
-//                    ''
-//                ],
-                'version' => '0.0.1',
-            ],
-            'servers' => [
-                ['url' => 'https://website.com']
-            ],
-            'paths' => [
-                '/users' => [
-                    'get' => [
-                        'summary' => 'Get all users',
-                        'description' => 'Get all users from the database',
-                        'tags' => [
-                            'users'
-                        ]
-                    ],
-                    'post' => [
-                        'summary' => 'Create a new user',
-                        'description' => 'Create a new user and store it in the database',
-                        'tags' => [
-                            'users',
-                        ]
-                    ]
-                ]
-            ],
-            'tags' =>[
-                ['name' => 'users','description' => 'User APIS'],
-            ],
-            'components' => [
-                ''
-            ]
-        ];
+        $data = $exampleArray;
 
         // Turn to yaml
 
-        $yaml = Yaml::dump($data);
+        $yaml = Yaml::dump($data,flags: Yaml::DUMP_EMPTY_ARRAY_AS_SEQUENCE | Yaml::DUMP_OBJECT_AS_MAP);
 
         // Put yaml to file
 
-        $dir = explode(DIRECTORY_SEPARATOR,config('docs.output_path'));
+        $outputPath = config('docs.output_path');
+
+        $dir = explode(DIRECTORY_SEPARATOR, $outputPath);
         array_pop($dir);
-        $dir = implode(DIRECTORY_SEPARATOR,$dir);
-        if (! is_dir($dir))
-        {
-            mkdir($dir,recursive:true);
+        $dir = implode(DIRECTORY_SEPARATOR, $dir);
+        if (! is_dir($dir)) {
+            mkdir($dir, recursive: true);
         }
 
-        file_put_contents(config('docs.output_path'),$yaml);
-
+        file_put_contents($outputPath, $yaml);
+        return $outputPath;
     }
 }

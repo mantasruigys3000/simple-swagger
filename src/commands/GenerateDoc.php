@@ -12,14 +12,16 @@ class GenerateDoc extends Command
 
     public function handle()
     {
-        $routes = Route::getRoutes();
+        //$routes = Route::getRoutes();
 
-        foreach ($routes as $route)
+        /*foreach ($routes as $route)
         {
-            var_dump('Generating for '. $route->uri);
-        }
+            //var_dump('Generating for '. $route->uri);
+        }*/
 
         $writer = new Writer();
-        $writer->write();
+        $output = $writer->write();
+
+        $this->info('docs generated at '. $output);
     }
 }
