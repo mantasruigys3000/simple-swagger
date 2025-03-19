@@ -113,6 +113,7 @@ return [
                 'properties' => [
                     'uuid' => ['type' => 'string','format' => 'uuid'],
                     'first_name' => ['type' => 'string'],
+                    'email' => ['type' => 'email'],
                 ]
             ],
             'get_minimal_user_response_schema' => [
@@ -130,6 +131,7 @@ return [
                 'value' => [
                     'uuid' => 'ce9280e2-1d3f-466d-9e81-6cd1ec9581d1',
                     'first_name' => 'John',
+                    'email' => 'email@example.com'
                 ]
             ],
             'minimal_user_example' => [
