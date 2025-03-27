@@ -8,6 +8,8 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Routing\Route as RouteData;
+use Mantasruigys3000\SimpleSwagger\attributes\interfaces\RouteParameterAttribute;
+use Mantasruigys3000\SimpleSwagger\attributes\PathParameter;
 use Mantasruigys3000\SimpleSwagger\attributes\RouteDescription;
 use Mantasruigys3000\SimpleSwagger\attributes\RouteTag;
 use ReflectionClass;
@@ -43,7 +45,7 @@ class Writer
 
         // Set up the paths and components lists
         $data['paths'] = [];
-        $data['components'] = [];
+        $components = [];
 
         // Now we need to gather any registered routes we want documented, and construct paths for them
         $routes = $this->getRoutes();
@@ -82,14 +84,14 @@ class Writer
 
             // Construct path object for this route
             //$data['paths']['uri']['operation']
-            $pathUri = $route->uri;
+            $pathUri = '/' . $route->uri;
             $pathObj = [
                 'tags' => $routeTags,
                 'summary' => $descriptionObject?->summary ?? '',
                 'description' => $descriptionObject->description ?? '',
-                'requestBody' => [],
-                'responses' => [],
-                'parameters' => [['in' => 'path','name' => 'member','type' => 'string']],
+//                'requestBody' => [],
+//                'responses' => [],
+                'parameters' => $this->getParameters($routeReflection),
             ];
             $data['paths'][$pathUri][strtolower($route->methods()[0])] = $pathObj;
 
@@ -98,6 +100,11 @@ class Writer
 
         // Append Generated Data
         $data['tags'] = $tags;
+
+        if ($components)
+        {
+            $data['components'] = $components;
+        }
 
         // Turn to yaml
         $yaml = Yaml::dump($data,flags: Yaml::DUMP_EMPTY_ARRAY_AS_SEQUENCE | Yaml::DUMP_OBJECT_AS_MAP);
@@ -139,5 +146,26 @@ class Writer
         });
 
         return $routes;
+    }
+
+    /**
+     * @param ReflectionMethod $method
+     * @return array<array>
+     */
+    private function getParameters(ReflectionMethod $method) : array
+    {
+        $parameterAttributes = $method->getAttributes(RouteParameterAttribute::class,\ReflectionAttribute::IS_INSTANCEOF);
+        $params = [];
+        foreach ($parameterAttributes as $attribute){
+
+            /**
+             * @var RouteParameterAttribute $routeParamAttribute
+             */
+            $routeParamAttribute = $attribute->newInstance();
+
+            $params[] = $routeParamAttribute->getRouteParameter()->toArray();
+        }
+
+        return $params;
     }
 }
