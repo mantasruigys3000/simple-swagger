@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mantasruigys3000\SimpleSwagger;
 
+use Exception;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Route;
@@ -12,6 +13,9 @@ use Mantasruigys3000\SimpleSwagger\attributes\interfaces\RouteParameterAttribute
 use Mantasruigys3000\SimpleSwagger\attributes\PathParameter;
 use Mantasruigys3000\SimpleSwagger\attributes\RouteDescription;
 use Mantasruigys3000\SimpleSwagger\attributes\RouteTag;
+use Mantasruigys3000\SimpleSwagger\attributes\Security;
+use Mantasruigys3000\SimpleSwagger\data\SecurityScheme;
+use Mantasruigys3000\SimpleSwagger\enums\SecuritySchemeType;
 use ReflectionClass;
 use ReflectionMethod;
 use Symfony\Component\Yaml\Yaml;
@@ -42,6 +46,7 @@ class Writer
         $data['openapi'] = config('docs.openapi');
         $data['info'] = config('docs.info');
         $data['servers'] = config('docs.servers');
+        $data['components']['securitySchemes'] = $this->getSecuritySchemes(); // Generate the security schemes
 
         // Set up the paths and components lists
         $data['paths'] = [];
@@ -92,6 +97,7 @@ class Writer
 //                'requestBody' => [],
 //                'responses' => [],
                 'parameters' => $this->getParameters($routeReflection),
+                'security' => $this->getRouteSecurity($routeReflection),
             ];
             $data['paths'][$pathUri][strtolower($route->methods()[0])] = $pathObj;
 
@@ -167,5 +173,37 @@ class Writer
         }
 
         return $params;
+    }
+
+    private function getRouteSecurity(ReflectionMethod $method) : array
+    {
+        $securityAttributes = $method->getAttributes(Security::class);
+        $security = [];
+
+        foreach ($securityAttributes as $securityAttribute){
+
+            /**
+             * @var Security $securityObject
+             */
+            $securityObject = $securityAttribute->newInstance();
+            $security[] = $securityObject->toArray();
+        }
+
+        return $security;
+    }
+
+    private function getSecuritySchemes() : array
+    {
+        $schemes = [];
+
+        foreach (config('docs.security_schemes') as $scheme){
+            if (! $scheme instanceof SecurityScheme ){
+                throw new Exception('Security schemes must be of type ' . SecuritySchemeType::class);
+            }
+
+            $schemes[$scheme->name] = $scheme->toArray();
+        }
+
+        return $schemes;
     }
 }
