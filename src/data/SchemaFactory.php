@@ -28,6 +28,15 @@ class SchemaFactory
         return $this->addProperty($name,'string',$description,now()->toIso8601String())->format('date-time');
     }
 
+    public function object(string $name, string $description,callable $function){
+        $object = new SchemaFactory();
+        $function($object);
+
+        $property = $this->addProperty($name,'object',$description,'object example');
+        $property->schema = $object;
+        return $property;
+    }
+
     public function resource(string $name,string $description,string $class)
     {
         $property = $this->addProperty($name,'object',$description,'example');
@@ -74,6 +83,9 @@ class SchemaFactory
                 'type' => $property->type
             ];
 
+            if (isset($property->schema)){
+                $arr['properties'] = $property->schema->getPropertiesArray();
+            }
 
             if (isset($property->format)){
                 $arr['format'] = $property->format;

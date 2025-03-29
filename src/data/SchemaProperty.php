@@ -12,6 +12,7 @@ class SchemaProperty
     public string $description;
     public array $refs = [];
     public string $resource;
+    public SchemaFactory $schema;
 
     public function required() : self
     {
