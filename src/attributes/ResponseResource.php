@@ -4,6 +4,7 @@ namespace Mantasruigys3000\SimpleSwagger\attributes;
 
 use Attribute;
 use Mantasruigys3000\SimpleSwagger\attributes\interfaces\ResponseAttribute;
+use Mantasruigys3000\SimpleSwagger\helpers\ReferenceHelper;
 
 #[Attribute]
 class ResponseResource implements ResponseAttribute
@@ -20,23 +21,29 @@ class ResponseResource implements ResponseAttribute
 
     public function toArray() : array
     {
-        $schemaRefs = [];
-        $exampleRefs = [];
+        // Get response bodies from the resource class and construct refs
+        $bodies = $this->resourceClass::responseBodies();
+
+        $schemaRefs = ReferenceHelper::getResponseSchemaReferences($this->resourceClass);
+        $exampleRefs = ReferenceHelper::getResponseExampleReferences($this->resourceClass);
+
+        /*$schemaRefs = [
+            ['$ref' => '#/components/schemas/get_user_response_schema'],
+            ['$ref' => '#/components/schemas/get_minimal_user_response_schema'],
+        ];
+        $exampleRefs = [
+            'User' => ['$ref' => '#/components/examples/user_example'],
+            'Minimal User' => ['$ref' => '#/components/examples/minimal_user_example'],
+        ];*/
 
         return [
             'description' => $this->description,
             'content' => [
                 'application/json' => [
                     'schema' => [
-                        'oneOf' => [
-                            ['$ref' => '#/components/schemas/get_user_response_schema'],
-                            ['$ref' => '#/components/schemas/get_minimal_user_response_schema'],
-                        ]
+                        'oneOf' => $schemaRefs
                     ],
-                    'examples' => [
-                        'User' => ['$ref' => '#/components/examples/user_example'],
-                        'Minimal User' => ['$ref' => '#/components/examples/minimal_user_example'],
-                    ]
+                    'examples' => $exampleRefs
                 ]
             ]
         ];

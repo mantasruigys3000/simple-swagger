@@ -20,6 +20,7 @@ use Mantasruigys3000\SimpleSwagger\attributes\Security;
 use Mantasruigys3000\SimpleSwagger\data\ResponseBody;
 use Mantasruigys3000\SimpleSwagger\data\SecurityScheme;
 use Mantasruigys3000\SimpleSwagger\enums\SecuritySchemeType;
+use Mantasruigys3000\SimpleSwagger\helpers\ReferenceHelper;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionMethod;
@@ -128,7 +129,15 @@ class Writer
             $data['components'] = $components;
         }
 
-        $data['components']['schemas'] = $this->getResponseSchemas(array_keys($responseComponentClasses));
+        $responseSchemas = $this->getResponseSchemas(array_keys($responseComponentClasses));
+
+        $data['components']['schemas'] = [
+            ...$responseSchemas['schemas']
+        ];
+
+        $data['components']['examples'] = [
+            ...$responseSchemas['examples']
+        ];
 
 
         // Turn to yaml
@@ -244,6 +253,7 @@ class Writer
     private function getResponseSchemas(array $responseClasses)
     {
         $schemas = [];
+        $examples = [];
 
         foreach ($responseClasses as $responseClass)
         {
@@ -255,19 +265,26 @@ class Writer
             foreach ($responseBodies as $responseBody){
 
                 // we need to construct a unique id using both resource class and response title
-                $id = $responseBody->title. $responseClass;
-                $id = Str::of($id)->snake()->replace('\\','')->replace('/','')->lower()->toString();
-
+                $id = ReferenceHelper::getResponseID($responseBody,$responseClass);
                 $schemas[$id] = [
                     'title' => $responseBody->title,
                     'properties' => $responseBody->schemaFactory->getPropertiesArray(),
                     'required' => $responseBody->schemaFactory->getRequired(),
                 ];
 
+                $exampleId = ReferenceHelper::getResponseExampleID($responseBody,$responseClass);
+                $examples[$exampleId] = [
+                    'summary' => $responseBody->title,
+                    'value' => $responseBody->schemaFactory->getExampleArray(),
+                ];
+
             }
         }
 
-        return $schemas;
+        return [
+            'schemas' => $schemas,
+            'examples' => $examples,
+        ];
     }
 
     private function getSecuritySchemes() : array

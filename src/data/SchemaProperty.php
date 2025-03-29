@@ -8,6 +8,10 @@ class SchemaProperty
     public string $type;
     public ?string $format;
     public bool $required = false;
+    public string $example;
+    public string $description;
+    public array $refs = [];
+    public string $resource;
 
     public function required() : self
     {
