@@ -275,7 +275,7 @@ class Writer
                 $exampleId = ReferenceHelper::getResponseExampleID($responseBody,$responseClass);
                 $examples[$exampleId] = [
                     'summary' => $responseBody->title,
-                    'value' => $responseBody->schemaFactory->getExampleArray(),
+                    'value' => $responseBody->schemaFactory->getExampleArray($responseClass),
                 ];
 
             }

@@ -16,16 +16,16 @@ class SchemaFactory
 
     public function string(string $name, string $description, string $example)
     {
-        return $this->addProperty($name,'string',$description,$example);
+        return $this->addProperty($name,'string',$description,$example)->example($example);
     }
 
     public function uuid(string $name, string $description) : SchemaProperty{
-        return $this->addProperty($name,'string',$description,Str::uuid()->toString())->uuid();
+        return $this->addProperty($name,'string',$description)->example(Str::uuid()->toString())->uuid();
     }
 
     public function datetime(string $name, string $description)
     {
-        return $this->addProperty($name,'string',$description,now()->toIso8601String())->format('date-time');
+        return $this->addProperty($name,'string',$description)->example(now()->toIso8601String())->format('date-time');
     }
 
     public function object(string $name, string $description,callable $function){
@@ -45,13 +45,12 @@ class SchemaFactory
         return $property;
     }
 
-    private function addProperty(string $name,string $type,string $description,string $example) : SchemaProperty
+    private function addProperty(string $name,string $type,string $description) : SchemaProperty
     {
         $property = new SchemaProperty();
         $property->name = $name;
         $property->type = $type;
         $property->description = $description;
-        $property->example = $example;
 
         $this->properties[] = $property;
         return $property;
@@ -112,10 +111,37 @@ class SchemaFactory
     /**
      * @return array
      */
-    public function getExampleArray() : array
+    public function getExampleArray(string $resourceClass,array $ignoreClasses = []) : array
     {
         $examples = [];
         foreach ($this->properties as $property){
+
+            if(isset($property->schema))
+            {
+                $examples[$property->name] = $property->schema->getExampleArray($resourceClass);
+                continue;
+            }
+
+            if (isset($property->resource))
+            {
+                // Get the first response body
+                // TODO: validate it exists
+                dump($resourceClass,$ignoreClasses);
+                if (! in_array($property->resource,$ignoreClasses)){
+                    $body = $property->resource::responseBodies()[0];
+                    $ignoreClasses[] = $resourceClass;
+                    $examples[$property->name] = $body->schemaFactory->getExampleArray($property->resource,$ignoreClasses);
+                    continue;
+                }
+
+                // Here if the class is to be ignored
+                // TODO need to come up with alternative ways to handle recursive examples, we could give to option to omit them
+                dump($resourceClass . ' is recursive');
+                $examples[$property->name] = '{recursive}';
+                continue;
+
+            }
+
             $examples[$property->name] = $property->example;
         }
 

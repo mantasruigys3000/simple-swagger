@@ -8,7 +8,7 @@ class SchemaProperty
     public string $type;
     public ?string $format;
     public bool $required = false;
-    public string $example;
+    public mixed $example = '';
     public string $description;
     public array $refs = [];
     public string $resource;
@@ -26,9 +26,15 @@ class SchemaProperty
         return $this;
     }
 
-    public function uuid()
+    public function uuid() : self
     {
         return $this->format('uuid');
+    }
+
+    public function example(mixed $example) : self
+    {
+        $this->example = $example;
+        return $this;
     }
 
 }
