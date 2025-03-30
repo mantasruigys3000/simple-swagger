@@ -44,7 +44,7 @@ class ReferenceHelper
         $exampleRefs = [];
 
         foreach ($bodies as $body){
-            $exampleRefs[] = ['$ref' => '#/components/examples/' . ReferenceHelper::getResponseExampleID($body,$resourceClass)];
+            $exampleRefs[$body->title] = ['$ref' => '#/components/examples/' . ReferenceHelper::getResponseExampleID($body,$resourceClass)];
         }
 
         return $exampleRefs;

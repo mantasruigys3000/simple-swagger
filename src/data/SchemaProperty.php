@@ -2,6 +2,8 @@
 
 namespace Mantasruigys3000\SimpleSwagger\data;
 
+use function PHPUnit\Framework\isInstanceOf;
+
 class SchemaProperty
 {
     public string $name;
@@ -13,6 +15,7 @@ class SchemaProperty
     public array $refs = [];
     public string $resource;
     public SchemaFactory $schema;
+    public $items = [];
 
     public function required() : self
     {
@@ -34,6 +37,34 @@ class SchemaProperty
     public function example(mixed $example) : self
     {
         $this->example = $example;
+        return $this;
+    }
+
+    public function array()
+    {
+        $arrayType = $this->type;
+
+        $this->type = 'array';
+        $this->items = [
+            'type' => $arrayType,
+        ];
+
+        if (isset($this->format)){
+            $this->items['format'] = $this->format;
+        }
+
+        $this->format = null;
+        $this->example = [$this->example];
+
+        if (isset($this->schema))
+        {
+            $this->items['properties'] = $this->schema->getPropertiesArray();
+            $this->example = [
+                $this->schema->getExampleArray('')
+            ];
+        }
+
+        unset($this->schema);
         return $this;
     }
 

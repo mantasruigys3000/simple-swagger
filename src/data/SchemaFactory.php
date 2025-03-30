@@ -19,7 +19,8 @@ class SchemaFactory
         return $this->addProperty($name,'string',$description,$example)->example($example);
     }
 
-    public function uuid(string $name, string $description) : SchemaProperty{
+    public function uuid(string $name, string $description) : SchemaProperty
+    {
         return $this->addProperty($name,'string',$description)->example(Str::uuid()->toString())->uuid();
     }
 
@@ -28,7 +29,9 @@ class SchemaFactory
         return $this->addProperty($name,'string',$description)->example(now()->toIso8601String())->format('date-time');
     }
 
-    public function object(string $name, string $description,callable $function){
+
+    public function object(string $name, string $description,callable $function)
+    {
         $object = new SchemaFactory();
         $function($object);
 
@@ -40,7 +43,6 @@ class SchemaFactory
     public function resource(string $name,string $description,string $class)
     {
         $property = $this->addProperty($name,'object',$description,'example');
-        //$property->refs[] = ReferenceHelper::getResponseSchemaReferences($class);
         $property->resource = $class;
         return $property;
     }
@@ -70,11 +72,18 @@ class SchemaFactory
                 continue;
             }
 
-            if (isset($property->resource)){
+            if (isset($property->resource) && $property->type === 'object'){
+
                 $properties[$property->name] = [
                     'oneOf' => ReferenceHelper::getResponseSchemaReferences($property->resource),
                 ];
 
+                continue;
+            }
+
+            if (isset($property->resource) && $property->type === 'array'){
+
+                $properties[$property->name]['items']['oneOf'] = ReferenceHelper::getResponseSchemaReferences($property->resource);
                 continue;
             }
 
@@ -88,6 +97,10 @@ class SchemaFactory
 
             if (isset($property->format)){
                 $arr['format'] = $property->format;
+            }
+
+            if (filled($property->items)){
+                $arr['items'] = $property->items;
             }
 
             $properties[$property->name] = $arr;
@@ -126,20 +139,23 @@ class SchemaFactory
             {
                 // Get the first response body
                 // TODO: validate it exists
-                dump($resourceClass,$ignoreClasses);
                 if (! in_array($property->resource,$ignoreClasses)){
                     $body = $property->resource::responseBodies()[0];
                     $ignoreClasses[] = $resourceClass;
-                    $examples[$property->name] = $body->schemaFactory->getExampleArray($property->resource,$ignoreClasses);
+                    if ($property->type === 'array')
+                    {
+                        $examples[$property->name] = [$body->schemaFactory->getExampleArray($property->resource,$ignoreClasses)];
+                    }
+                    else{
+                        $examples[$property->name] = $body->schemaFactory->getExampleArray($property->resource,$ignoreClasses);
+                    }
                     continue;
                 }
 
                 // Here if the class is to be ignored
                 // TODO need to come up with alternative ways to handle recursive examples, we could give to option to omit them
-                dump($resourceClass . ' is recursive');
                 $examples[$property->name] = '{recursive}';
                 continue;
-
             }
 
             $examples[$property->name] = $property->example;
