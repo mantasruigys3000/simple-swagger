@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Mantasruigys3000\SimpleSwagger;
 
 use Exception;
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Route;
@@ -21,6 +23,7 @@ use Mantasruigys3000\SimpleSwagger\data\ResponseBody;
 use Mantasruigys3000\SimpleSwagger\data\SecurityScheme;
 use Mantasruigys3000\SimpleSwagger\enums\SecuritySchemeType;
 use Mantasruigys3000\SimpleSwagger\helpers\ReferenceHelper;
+use Mantasruigys3000\SimpleSwagger\traits\HasRequestBodies;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionMethod;
@@ -66,6 +69,9 @@ class Writer
         // We keep a list of the class names referenced to avoid duplicates when constructing the schemes
         $responseComponentClasses = [];
 
+        // same for request body schemas
+        $requestBodyComponentClasses = [];
+
         foreach ($routes as $route)
         {
             $controllerClass = $route->getControllerClass();
@@ -88,6 +94,11 @@ class Writer
              * Get description
              * Using attribute is preferable but will need to implement ability to use the docblock comment
              */
+
+            if ($functionName === $controllerClass){
+                $functionName = '__invoke';
+            }
+
             $routeReflection = new ReflectionMethod($controllerClass,$functionName);
 
             /**
@@ -104,11 +115,14 @@ class Writer
             // Construct the responses. we need to make sure to use incline defined responses along with re-usable components
             $responses = $this->getRouteResponses($routeReflection,$responseComponentClasses);
 
+            // Construct the request bodies
+            $requestBody = $this->getRouteRequests($routeReflection,$requestBodyComponentClasses);
+
             $pathObj = [
                 'tags' => $routeTags,
                 'summary' => $descriptionObject?->summary ?? '',
                 'description' => $descriptionObject->description ?? '',
-//                'requestBody' => [],
+                'requestBody' => $requestBody,
                 'responses' => $responses,
                 'parameters' => $this->getParameters($routeReflection),
                 'security' => $this->getRouteSecurity($routeReflection),
@@ -130,13 +144,16 @@ class Writer
         }
 
         $responseSchemas = $this->getResponseSchemas(array_keys($responseComponentClasses));
+        $requestSchemas = $this->getRequestSchemas(array_keys($requestBodyComponentClasses));
 
         $data['components']['schemas'] = [
-            ...$responseSchemas['schemas']
+            ...$responseSchemas['schemas'],
+            ...$requestSchemas['schemas'],
         ];
 
         $data['components']['examples'] = [
-            ...$responseSchemas['examples']
+            ...$responseSchemas['examples'],
+            ...$requestSchemas['examples'],
         ];
 
 
@@ -250,6 +267,7 @@ class Writer
         return $responses;
     }
 
+
     private function getResponseSchemas(array $responseClasses)
     {
         $schemas = [];
@@ -279,6 +297,70 @@ class Writer
                 ];
 
             }
+        }
+
+        return [
+            'schemas' => $schemas,
+            'examples' => $examples,
+        ];
+    }
+
+    private function getRouteRequests(ReflectionMethod $method, array &$requestClasses)
+    {
+        $body = [
+            'description' => 'Request body description', // todo
+        ];
+
+        // Is the first param a request type and does it implement the trait
+        $methodParams = $method->getParameters();
+        if (count($methodParams) > 0)
+        {
+            $requestParam = $methodParams[0]->getType()->getName();
+
+            if (is_subclass_of($requestParam,FormRequest::class)){
+
+                $traits = class_uses($requestParam);
+                if (in_array(HasRequestBodies::class,$traits))
+                {
+                    // TODO apply refs
+                    $requestClasses[$requestParam] = 1;
+
+                    // TODO support multiple schema types
+                    $body['content']['application/json']['schema']['oneOf'] = ReferenceHelper::getRequestSchemaReferences($requestParam);
+                    $body['content']['application/json']['examples'] = ReferenceHelper::getRequestExampleReferences($requestParam);
+                    // the content should consist of references to request schemas
+                    //dd($requestParam::requestBodies());
+                }
+            }
+        }
+
+        return $body;
+    }
+
+    private function getRequestSchemas(array $requestClasses) : array
+    {
+        $schemas = [];
+        $examples = [];
+
+        foreach ($requestClasses as $requestClass){
+            $bodies = $requestClass::requestBodies();
+
+            foreach ($bodies as $body){
+                $id = ReferenceHelper::getRequestID($body,$requestClass);
+                $schemas[$id] = [
+                    'title' => $body->title,
+                    'properties' => $body->schemaFactory->getPropertiesArray(),
+                    'required' => $body->schemaFactory->getRequired(),
+                ];
+
+                // create example
+                $exampleId = ReferenceHelper::getRequestExampleID($body,$requestClass);
+                $examples[$exampleId] = [
+                    'summary' => $body->title,
+                    'value' => $body->schemaFactory->getExampleArray($requestClass),
+                ];
+            }
+
         }
 
         return [

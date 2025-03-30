@@ -27,15 +27,6 @@ class ResponseResource implements ResponseAttribute
         $schemaRefs = ReferenceHelper::getResponseSchemaReferences($this->resourceClass);
         $exampleRefs = ReferenceHelper::getResponseExampleReferences($this->resourceClass);
 
-        /*$schemaRefs = [
-            ['$ref' => '#/components/schemas/get_user_response_schema'],
-            ['$ref' => '#/components/schemas/get_minimal_user_response_schema'],
-        ];
-        $exampleRefs = [
-            'User' => ['$ref' => '#/components/examples/user_example'],
-            'Minimal User' => ['$ref' => '#/components/examples/minimal_user_example'],
-        ];*/
-
         return [
             'description' => $this->description,
             'content' => [
