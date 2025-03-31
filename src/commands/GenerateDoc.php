@@ -20,8 +20,15 @@ class GenerateDoc extends Command
         }*/
 
         $writer = new Writer();
+
+        // Register callbacks
+        $writer->infoCallback = fn(string $info) => $this->info($info);
+        $writer->errorCallback = fn(string $info) => $this->warn($info);
+
         $output = $writer->write();
 
         $this->info('docs generated at '. $output);
     }
+
+
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Mantasruigys3000\SimpleSwagger;
 
+use Closure;
 use Exception;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Request;
@@ -29,9 +30,13 @@ use ReflectionClass;
 use ReflectionMethod;
 use Symfony\Component\Yaml\Yaml;
 use function Orchestra\Testbench\package_path;
+use function Symfony\Component\String\s;
 
 class Writer
 {
+    public Closure $errorCallback;
+    public Closure $infoCallback;
+
     public function __construct() {}
 
     public function write() : string
@@ -74,12 +79,20 @@ class Writer
 
         foreach ($routes as $route)
         {
+            $this->info(sprintf("Building route %s:/%s",$route->methods()[0],$route->uri()));
+
             $controllerClass = $route->getControllerClass();
             $functionName = $route->getActionMethod();
             $routeTags = [];
 
             $reflection = new ReflectionClass($controllerClass);
-            foreach ($reflection->getAttributes(RouteTag::class) as $attribute)
+            $routeTagAttributes = $reflection->getAttributes(RouteTag::class);
+
+            if (empty($routeTagAttributes)){
+                $this->error(sprintf('class %s missing RouteTag element',$controllerClass));
+            }
+
+            foreach ($routeTagAttributes as $attribute)
             {
                 /**
                  * @var RouteTag $routeTag
@@ -107,6 +120,11 @@ class Writer
              */
             $descriptionAttributes = $routeReflection->getAttributes(RouteDescription::class);
             $descriptionObject = count($descriptionAttributes) === 0 ? null : $descriptionAttributes[0]->newInstance();
+
+            if (is_null($descriptionObject))
+            {
+                $this->error(sprintf("%s @%s has no RouteDescription",$controllerClass,$functionName));
+            }
 
             // Construct path object for this route
             //$data['paths']['uri']['operation']
@@ -247,6 +265,7 @@ class Writer
     {
         $responseAttributes = $method->getAttributes(ResponseAttribute::class,ReflectionAttribute::IS_INSTANCEOF);
         $responses = [];
+        $hasOkay = false;
         foreach ($responseAttributes as $responseAttribute)
         {
             /**
@@ -254,7 +273,13 @@ class Writer
              */
 
             $responseObject = $responseAttribute->newInstance();
-            $responses[$responseObject->getStatus()] = $responseObject->toArray();
+            $status = $responseObject->getStatus();
+
+            if ($status >= 200 && $status < 300){
+                $hasOkay = true;
+            }
+
+            $responses[$status] = $responseObject->toArray();
 
             if ($responseObject instanceof ResponseResource){
                 // TODO: validate the resource class implements the trait or at least implements the function
@@ -264,6 +289,10 @@ class Writer
             }
         }
 
+        // If no routes contain a 2** status then throw an error
+        if (!$hasOkay){
+            $this->error(sprintf("%s @%s does not document a successful response",$method->class,$method->name));
+        }
         return $responses;
     }
 
@@ -313,6 +342,7 @@ class Writer
 
         // Is the first param a request type and does it implement the trait
         $methodParams = $method->getParameters();
+
         if (count($methodParams) > 0)
         {
             $requestParam = $methodParams[0]->getType()->getName();
@@ -330,6 +360,9 @@ class Writer
                     $body['content']['application/json']['examples'] = ReferenceHelper::getRequestExampleReferences($requestParam);
                     // the content should consist of references to request schemas
                     //dd($requestParam::requestBodies());
+                }
+                else{
+                    $this->error(sprintf("%s does not implement HasRequestBodies",$requestParam));
                 }
             }
         }
@@ -383,4 +416,25 @@ class Writer
 
         return $schemes;
     }
+
+    private function error(string $error)
+    {
+        if (! isset($this->errorCallback)){
+            return;
+        }
+
+        ($this->errorCallback)($error);
+    }
+
+    private function info(string $info)
+    {
+        if (! isset($this->infoCallback))
+        {
+            return;
+        }
+
+        ($this->infoCallback)($info);
+    }
+
+
 }
