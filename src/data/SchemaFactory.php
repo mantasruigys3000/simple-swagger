@@ -2,7 +2,10 @@
 
 namespace Mantasruigys3000\SimpleSwagger\data;
 
+use App\Enums\EventAccessLevel;
+use Exception;
 use Illuminate\Support\Str;
+use Mantasruigys3000\SimpleSwagger\helpers\EnumHelper;
 use Mantasruigys3000\SimpleSwagger\helpers\ReferenceHelper;
 use phpDocumentor\Reflection\Types\CallableParameter;
 use function Orchestra\Testbench\container;
@@ -12,16 +15,38 @@ class SchemaFactory
     /**
      * @var SchemaProperty[]
      */
-    public array $properties;
+    public array $properties = [];
 
     public function string(string $name, string $description, string $example)
     {
         return $this->addProperty($name,'string',$description,$example)->example($example);
     }
 
+    public function integer(string $name, string $description,int $example)
+    {
+        return $this->addProperty($name,'integer',$description)->example($example);
+    }
+
     public function uuid(string $name, string $description) : SchemaProperty
     {
         return $this->addProperty($name,'string',$description)->example(Str::uuid()->toString())->uuid();
+    }
+
+    public function boolean(string $name,string $description,bool $example = true)
+    {
+        return $this->addProperty($name,'boolean',$description)->example($example);
+    }
+
+    public function enum(string $name, string $desctiption,string $enumClass)
+    {
+        if (! enum_exists($enumClass)){
+            throw new Exception(sprintf('enum class %s does not exist',$enumClass));
+        }
+
+        $values = EnumHelper::enumValues($enumClass);
+        $example = $values[0];
+
+        return $this->addProperty($name,'string',$desctiption)->enum($values)->example($example);
     }
 
     public function datetime(string $name, string $description)
@@ -88,7 +113,8 @@ class SchemaFactory
             }
 
             $arr = [
-                'type' => $property->type
+                'type' => $property->type,
+                'nullable' => $property->nullable,
             ];
 
             if (isset($property->schema)){
@@ -112,11 +138,18 @@ class SchemaFactory
             }
 
             if (isset($property->min)){
-                $arr['min'] = $property->min;
+                $arr['minimum'] = $property->min;
             }
 
             if (isset($property->max)){
-                $arr['max'] = $property->max;
+                $arr['maximum'] = $property->max;
+            }
+
+            if (filled($property->enum)){
+                $arr['enum'] = $property->enum;
+                if($property->nullable){
+                    $arr['enum'][] = null;
+                }
             }
 
             $properties[$property->name] = $arr;

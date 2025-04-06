@@ -9,6 +9,7 @@ class SchemaProperty
     public string $name;
     public string $type;
     public ?string $format;
+    public bool $nullable = false;
 
     public ?int $minLength;
     public ?int $maxLength;
@@ -23,6 +24,7 @@ class SchemaProperty
     public string $resource;
     public SchemaFactory $schema;
     public $items = [];
+    public $enum = [];
 
     /**
      * Mark field as required
@@ -79,6 +81,28 @@ class SchemaProperty
     public function max(int $max) : self
     {
         $this->max = $max;
+        return $this;
+    }
+
+    /**
+     * Make this an enum type
+     *
+     * @param array $values
+     * @return $this
+     */
+    public function enum(array $values) : self
+    {
+        $this->enum = $values;
+        return $this;
+    }
+
+    /**
+     * @param bool $nullable
+     * @return $this
+     */
+    public function nullable(bool $nullable = true) : self
+    {
+        $this->nullable = $nullable;
         return $this;
     }
 

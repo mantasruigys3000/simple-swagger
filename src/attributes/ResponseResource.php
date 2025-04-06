@@ -6,7 +6,7 @@ use Attribute;
 use Mantasruigys3000\SimpleSwagger\attributes\interfaces\ResponseAttribute;
 use Mantasruigys3000\SimpleSwagger\helpers\ReferenceHelper;
 
-#[Attribute]
+#[Attribute(Attribute::IS_REPEATABLE | Attribute::TARGET_ALL)]
 class ResponseResource implements ResponseAttribute
 {
     public function __construct(public int $status, public string $resourceClass,public bool $collection = false,public string $description = '')
