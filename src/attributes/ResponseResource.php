@@ -25,18 +25,36 @@ class ResponseResource implements ResponseAttribute
         $bodies = $this->resourceClass::responseBodies();
 
         $schemaRefs = ReferenceHelper::getResponseSchemaReferences($this->resourceClass);
-        $exampleRefs = ReferenceHelper::getResponseExampleReferences($this->resourceClass);
+        $exampleRefs = $this->collection ?
+            ReferenceHelper::getResponseCollectionExampleReferences($this->resourceClass) :
+            ReferenceHelper::getResponseExampleReferences($this->resourceClass);
+
+        $nonCollectionContent = [
+            'application/json' => [
+                'schema' => [
+                    'oneOf' => $schemaRefs
+                ],
+                'examples' => $exampleRefs
+            ]
+        ];
+
+        $collectionContent = [
+            'application/json' => [
+                'schema' => [
+                    'type' => 'array',
+                    'items' => [
+                        'oneOf' => $schemaRefs
+                    ]
+                ],
+                'examples' => $exampleRefs
+            ]
+        ];
+
+        $content = $this->collection ? $collectionContent : $nonCollectionContent;
 
         return [
             'description' => $this->description,
-            'content' => [
-                'application/json' => [
-                    'schema' => [
-                        'oneOf' => $schemaRefs
-                    ],
-                    'examples' => $exampleRefs
-                ]
-            ]
+            'content' => $content,
         ];
     }
 }

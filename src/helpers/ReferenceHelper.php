@@ -20,9 +20,13 @@ class ReferenceHelper
         return $id;
     }
 
-    public static function getResponseExampleID(ResponseBody $body, string $class)
+    public static function getResponseExampleID(ResponseBody $body, string $class,bool $collection = false)
     {
-        return self::getResponseID($body,$class) . '_example';
+        $id = self::getResponseID($body,$class) . '_example';
+        if ($collection){
+            $id = 'collection_'.$id;
+        }
+        return $id;
     }
 
     public static function getResponseSchemaReferences(string $resourceClass) : array
@@ -46,6 +50,19 @@ class ReferenceHelper
 
         foreach ($bodies as $body){
             $exampleRefs[$body->title] = ['$ref' => '#/components/examples/' . ReferenceHelper::getResponseExampleID($body,$resourceClass)];
+        }
+
+        return $exampleRefs;
+    }
+
+    public static function getResponseCollectionExampleReferences(string $resourceClass) : array
+    {
+        $bodies = $resourceClass::responseBodies();
+
+        $exampleRefs = [];
+
+        foreach ($bodies as $body){
+            $exampleRefs[$body->title] = ['$ref' => '#/components/examples/' . ReferenceHelper::getResponseExampleID($body,$resourceClass,true)];
         }
 
         return $exampleRefs;

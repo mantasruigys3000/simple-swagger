@@ -74,6 +74,10 @@ class Writer
         // We keep a list of the class names referenced to avoid duplicates when constructing the schemes
         $responseComponentClasses = [];
 
+        // We need another list of response classes that have a collection variant as we need to construct an example as an array type
+        // This is inefficient duplication however there is no way to reference examples within examples, so it needs to be re build
+        $responseComponentCollectionClasses = [];
+
         // same for request body schemas
         $requestBodyComponentClasses = [];
 
@@ -131,7 +135,7 @@ class Writer
             $pathUri = '/' . $route->uri;
 
             // Construct the responses. we need to make sure to use incline defined responses along with re-usable components
-            $responses = $this->getRouteResponses($routeReflection,$responseComponentClasses);
+            $responses = $this->getRouteResponses($routeReflection,$responseComponentClasses,$responseComponentCollectionClasses);
 
             // Construct the request bodies
             $requestBody = $this->getRouteRequests($routeReflection,$requestBodyComponentClasses);
@@ -161,7 +165,7 @@ class Writer
             $data['components'] = $components;
         }
 
-        $responseSchemas = $this->getResponseSchemas(array_keys($responseComponentClasses));
+        $responseSchemas = $this->getResponseSchemas(array_keys($responseComponentClasses),array_keys($responseComponentCollectionClasses));
         $requestSchemas = $this->getRequestSchemas(array_keys($requestBodyComponentClasses));
 
         $data['components']['schemas'] = [
@@ -261,7 +265,7 @@ class Writer
      *
      * @return array
      */
-    private function getRouteResponses(ReflectionMethod $method, array &$responseClasses) : array
+    private function getRouteResponses(ReflectionMethod $method, array &$responseClasses, array &$responseCollections) : array
     {
         $responseAttributes = $method->getAttributes(ResponseAttribute::class,ReflectionAttribute::IS_INSTANCEOF);
         $responses = [];
@@ -275,7 +279,7 @@ class Writer
             $responseObject = $responseAttribute->newInstance();
             $status = $responseObject->getStatus();
 
-            if ($status >= 200 && $status < 300){
+            if ($status >= 200 && $status <= 399){
                 $hasOkay = true;
             }
 
@@ -286,24 +290,30 @@ class Writer
 
                 // Using the class names as the key forces each entry to be unique, the value associated with it is not used
                 $responseClasses[$responseObject->resourceClass] = 1;
+
+                if ($responseObject->collection){
+                    $responseCollections[$responseObject->resourceClass] = 1;
+                }
             }
         }
 
         // If no routes contain a 2** status then throw an error
         if (!$hasOkay){
-            $this->error(sprintf("%s @%s does not document a successful response",$method->class,$method->name));
+            $this->error(sprintf("%s @%s does not document a successful or redirect response",$method->class,$method->name));
         }
         return $responses;
     }
 
 
-    private function getResponseSchemas(array $responseClasses)
+    private function getResponseSchemas(array $responseClasses,array $collectionClasses)
     {
         $schemas = [];
         $examples = [];
 
         foreach ($responseClasses as $responseClass)
         {
+            $isCollection = in_array($responseClass,$collectionClasses);
+
             /**
              * @var ResponseBody[] $responseBodies;
              */
@@ -325,7 +335,15 @@ class Writer
                     'value' => $responseBody->schemaFactory->getExampleArray($responseClass),
                 ];
 
+                // If this resource has a collection variant, create that now
+                if ($isCollection){
+                    $collectionExampleId = ReferenceHelper::getResponseExampleID($responseBody,$responseClass,true);
+                    $examples[$collectionExampleId] = $examples[$exampleId];
+                    $examples[$collectionExampleId]['value'] = [$examples[$collectionExampleId]['value']];
+                }
+
             }
+
         }
 
         return [

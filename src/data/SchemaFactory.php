@@ -103,6 +103,22 @@ class SchemaFactory
                 $arr['items'] = $property->items;
             }
 
+            if (isset($property->minLength)){
+                $arr['minLength'] = $property->minLength;
+            }
+
+            if (isset($property->maxLength)){
+                $arr['maxLength'] = $property->maxLength;
+            }
+
+            if (isset($property->min)){
+                $arr['min'] = $property->min;
+            }
+
+            if (isset($property->max)){
+                $arr['max'] = $property->max;
+            }
+
             $properties[$property->name] = $arr;
         }
 
