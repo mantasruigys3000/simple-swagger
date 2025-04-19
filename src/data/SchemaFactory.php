@@ -118,7 +118,7 @@ class SchemaFactory
             ];
 
             // Only add nullable if it is true, for some reason openapi does not like it set to false
-            if ($property->nullable){
+            if ($property->nullable) {
                 $arr['nullable'] = $property->nullable;
             }
 
@@ -161,6 +161,26 @@ class SchemaFactory
         }
 
         return $properties;
+    }
+
+    /**
+     * @return arary
+     */
+    public function getNestedResourceClasses(): array
+    {
+        $classes = [];
+
+        foreach ($this->properties as $property) {
+            if (isset($property->resource)) {
+                $classes[] = $property->resource;
+            }
+
+            if (isset($property->schema)) {
+                $classes = array_merge($classes, $property->schema->getNestedResourceClasses());
+            }
+        }
+
+        return $classes;
     }
 
     public function getRequired(): array

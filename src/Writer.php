@@ -11,8 +11,10 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Route as RouteData;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 use Mantasruigys3000\SimpleSwagger\attributes\interfaces\ResponseAttribute;
 use Mantasruigys3000\SimpleSwagger\attributes\interfaces\RouteParameterAttribute;
+use Mantasruigys3000\SimpleSwagger\attributes\ResponseJson;
 use Mantasruigys3000\SimpleSwagger\attributes\ResponseResource;
 use Mantasruigys3000\SimpleSwagger\attributes\RouteDescription;
 use Mantasruigys3000\SimpleSwagger\attributes\RouteTag;
@@ -20,7 +22,9 @@ use Mantasruigys3000\SimpleSwagger\attributes\Security;
 use Mantasruigys3000\SimpleSwagger\data\ResponseBody;
 use Mantasruigys3000\SimpleSwagger\data\SecurityScheme;
 use Mantasruigys3000\SimpleSwagger\enums\SecuritySchemeType;
+use Mantasruigys3000\SimpleSwagger\helpers\ClassHelper;
 use Mantasruigys3000\SimpleSwagger\helpers\ReferenceHelper;
+use Mantasruigys3000\SimpleSwagger\interfaces\JsonResponse;
 use Mantasruigys3000\SimpleSwagger\traits\HasRequestBodies;
 use ReflectionAttribute;
 use ReflectionClass;
@@ -118,6 +122,9 @@ class Writer
             $descriptionAttributes = $routeReflection->getAttributes(RouteDescription::class);
             $descriptionObject = count($descriptionAttributes) === 0 ? null : $descriptionAttributes[0]->newInstance();
 
+            $operationId = sprintf('%s@%s', $controllerClass, $functionName);
+            $operationId = Str::of($operationId)->afterLast('\\')->toString();
+
             if (is_null($descriptionObject)) {
                 $this->error(sprintf('%s @%s has no RouteDescription', $controllerClass, $functionName));
             }
@@ -138,13 +145,14 @@ class Writer
                 'description' => $descriptionObject->description ?? '',
                 'parameters' => $this->getParameters($routeReflection),
                 'security' => $this->getRouteSecurity($routeReflection),
+                'operationId' => $operationId,
             ];
 
-            if ($requestBody){
+            if ($requestBody) {
                 $pathObj['requestBody'] = $requestBody;
             }
 
-            if ($responses){
+            if ($responses) {
                 $pathObj['responses'] = $responses;
             }
 
@@ -161,6 +169,13 @@ class Writer
         if ($components) {
             $data['components'] = $components;
         }
+
+        /**
+         * Before using all the resource classes, we also need to check the current ones for references to resource classes that have not been registered
+         * For example, a response may use $data->resource, and will try reference the components from that resource, however that resource may not be in any
+         * #ResponseResource attributes
+         */
+        $this->getNestedResourceClasses($responseComponentClasses);
 
         $responseSchemas = $this->getResponseSchemas(array_keys($responseComponentClasses), array_keys($responseComponentCollectionClasses));
         $requestSchemas = $this->getRequestSchemas(array_keys($requestBodyComponentClasses));
@@ -286,6 +301,10 @@ class Writer
                     $responseCollections[$responseObject->resourceClass] = 1;
                 }
             }
+
+            if ($responseObject instanceof ResponseJson) {
+                $responseClasses[$responseObject->jsonResponse] = 1;
+            }
         }
 
         // If no routes contain a 2** status then throw an error
@@ -296,6 +315,37 @@ class Writer
         return $responses;
     }
 
+    /**
+     * Will check current responses for resources
+     * Expensive function call
+     *
+     * @return void
+     */
+    private function getNestedResourceClasses(array &$responseClasses)
+    {
+        foreach ($responseClasses as $class => $one) {
+            $responseBodies = [];
+
+            // TODO do a direct trait check first
+            if (method_exists($class, 'responseBodies')) {
+                /**
+                 * @var ResponseBody[] $responseBodies;
+                 */
+                $responseBodies = $class::responseBodies();
+            }
+
+            if (ClassHelper::implements($class, JsonResponse::class)) {
+                $responseBodies = (new $class)();
+            }
+
+            foreach ($responseBodies as $body){
+                foreach ($body->schemaFactory->getNestedResourceClasses() as $nestedResourceClass){
+                    $responseClasses[$nestedResourceClass] = 1;
+                }
+            }
+        }
+    }
+
     private function getResponseSchemas(array $responseClasses, array $collectionClasses)
     {
         $schemas = [];
@@ -303,11 +353,19 @@ class Writer
 
         foreach ($responseClasses as $responseClass) {
             $isCollection = in_array($responseClass, $collectionClasses);
+            $responseBodies = [];
 
-            /**
-             * @var ResponseBody[] $responseBodies;
-             */
-            $responseBodies = $responseClass::responseBodies();
+            // TODO do a direct trait check first
+            if (method_exists($responseClass, 'responseBodies')) {
+                /**
+                 * @var ResponseBody[] $responseBodies;
+                 */
+                $responseBodies = $responseClass::responseBodies();
+            }
+
+            if (ClassHelper::implements($responseClass, JsonResponse::class)) {
+                $responseBodies = (new $responseClass)();
+            }
 
             foreach ($responseBodies as $responseBody) {
 
@@ -345,7 +403,7 @@ class Writer
     private function getRouteRequests(ReflectionMethod $method, array &$requestClasses)
     {
         $body = [
-            //'description' => 'Request body description', // todo
+            // 'description' => 'Request body description', // todo
         ];
 
         // Is the first param a request type and does it implement the trait
@@ -361,7 +419,7 @@ class Writer
 
                     // if the array given is empty, then add nothing to the request body data, and do not pass back the class
                     $bodies = $requestParam::requestBodies();
-                    if ($bodies){
+                    if ($bodies) {
                         $requestClasses[$requestParam] = 1;
 
                         // TODO support multiple schema types
