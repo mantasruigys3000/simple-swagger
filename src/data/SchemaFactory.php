@@ -1,14 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Mantasruigys3000\SimpleSwagger\data;
 
-use App\Enums\EventAccessLevel;
 use Exception;
 use Illuminate\Support\Str;
 use Mantasruigys3000\SimpleSwagger\helpers\EnumHelper;
 use Mantasruigys3000\SimpleSwagger\helpers\ReferenceHelper;
-use phpDocumentor\Reflection\Types\CallableParameter;
-use function Orchestra\Testbench\container;
 
 class SchemaFactory
 {
@@ -19,77 +18,78 @@ class SchemaFactory
 
     public function string(string $name, string $description, string $example)
     {
-        return $this->addProperty($name,'string',$description,$example)->example($example);
+        return $this->addProperty($name, 'string', $description, $example)->example($example);
     }
 
-    public function integer(string $name, string $description,int $example)
+    public function integer(string $name, string $description, int $example)
     {
-        return $this->addProperty($name,'integer',$description)->example($example);
+        return $this->addProperty($name, 'integer', $description)->example($example);
     }
 
-    public function uuid(string $name, string $description) : SchemaProperty
+    public function uuid(string $name, string $description): SchemaProperty
     {
-        return $this->addProperty($name,'string',$description)->example(Str::uuid()->toString())->uuid();
+        return $this->addProperty($name, 'string', $description)->example(Str::uuid()->toString())->uuid();
     }
 
-    public function boolean(string $name,string $description,bool $example = true)
+    public function boolean(string $name, string $description, bool $example = true)
     {
-        return $this->addProperty($name,'boolean',$description)->example($example);
+        return $this->addProperty($name, 'boolean', $description)->example($example);
     }
 
-    public function enum(string $name, string $desctiption,string $enumClass)
+    public function enum(string $name, string $desctiption, string $enumClass)
     {
-        if (! enum_exists($enumClass)){
-            throw new Exception(sprintf('enum class %s does not exist',$enumClass));
+        if (! enum_exists($enumClass)) {
+            throw new Exception(sprintf('enum class %s does not exist', $enumClass));
         }
 
         $values = EnumHelper::enumValues($enumClass);
         $example = $values[0];
 
-        return $this->addProperty($name,'string',$desctiption)->enum($values)->example($example);
+        return $this->addProperty($name, 'string', $desctiption)->enum($values)->example($example);
     }
 
     public function datetime(string $name, string $description)
     {
-        return $this->addProperty($name,'string',$description)->example(now()->toIso8601String())->format('date-time');
+        return $this->addProperty($name, 'string', $description)->example(now()->toIso8601String())->format('date-time');
     }
 
-
-    public function object(string $name, string $description,callable $function)
+    public function object(string $name, string $description, callable $function)
     {
-        $object = new SchemaFactory();
+        $object = new SchemaFactory;
         $function($object);
 
-        $property = $this->addProperty($name,'object',$description,'object example');
+        $property = $this->addProperty($name, 'object', $description, 'object example');
         $property->schema = $object;
+
         return $property;
     }
 
-    public function resource(string $name,string $description,string $class)
+    public function resource(string $name, string $description, string $class)
     {
-        $property = $this->addProperty($name,'object',$description,'example');
+        $property = $this->addProperty($name, 'object', $description, 'example');
         $property->resource = $class;
+
         return $property;
     }
 
-    private function addProperty(string $name,string $type,string $description) : SchemaProperty
+    private function addProperty(string $name, string $type, string $description): SchemaProperty
     {
-        $property = new SchemaProperty();
+        $property = new SchemaProperty;
         $property->name = $name;
         $property->type = $type;
         $property->description = $description;
 
         $this->properties[] = $property;
+
         return $property;
     }
 
-    public function getPropertiesArray() : array
+    public function getPropertiesArray(): array
     {
         $properties = [];
 
-        foreach ($this->properties as $property)
-        {
-            if (count($property->refs) > 0){
+        foreach ($this->properties as $property) {
+            if (count($property->refs) > 0) {
                 $properties[$property->name] = [
                     'oneOf' => $property->refs[0],
                 ];
@@ -97,7 +97,7 @@ class SchemaFactory
                 continue;
             }
 
-            if (isset($property->resource) && $property->type === 'object'){
+            if (isset($property->resource) && $property->type === 'object') {
 
                 $properties[$property->name] = [
                     'oneOf' => ReferenceHelper::getResponseSchemaReferences($property->resource),
@@ -106,48 +106,53 @@ class SchemaFactory
                 continue;
             }
 
-            if (isset($property->resource) && $property->type === 'array'){
+            if (isset($property->resource) && $property->type === 'array') {
 
                 $properties[$property->name]['items']['oneOf'] = ReferenceHelper::getResponseSchemaReferences($property->resource);
+
                 continue;
             }
 
             $arr = [
                 'type' => $property->type,
-                'nullable' => $property->nullable,
             ];
 
-            if (isset($property->schema)){
+            // Only add nullable if it is true, for some reason openapi does not like it set to false
+            if ($property->nullable){
+                $arr['nullable'] = $property->nullable;
+            }
+
+            if (isset($property->schema)) {
                 $arr['properties'] = $property->schema->getPropertiesArray();
             }
 
-            if (isset($property->format)){
+            if (isset($property->format)) {
                 $arr['format'] = $property->format;
             }
 
-            if (filled($property->items)){
+            if (filled($property->items)) {
                 $arr['items'] = $property->items;
             }
 
-            if (isset($property->minLength)){
+            if (isset($property->minLength)) {
                 $arr['minLength'] = $property->minLength;
             }
 
-            if (isset($property->maxLength)){
+            if (isset($property->maxLength)) {
                 $arr['maxLength'] = $property->maxLength;
             }
 
-            if (isset($property->min)){
+            if (isset($property->min)) {
                 $arr['minimum'] = $property->min;
             }
 
-            if (isset($property->max)){
+            if (isset($property->max)) {
                 $arr['maximum'] = $property->max;
             }
 
-            if (filled($property->enum)){
+            if (filled($property->enum)) {
                 $arr['enum'] = $property->enum;
-                if($property->nullable){
+                if ($property->nullable) {
                     $arr['enum'][] = null;
                 }
             }
@@ -158,11 +163,11 @@ class SchemaFactory
         return $properties;
     }
 
-    public function getRequired() : array
+    public function getRequired(): array
     {
         $required = [];
-        foreach ($this->properties as $property){
-            if ($property->required){
+        foreach ($this->properties as $property) {
+            if ($property->required) {
                 $required[] = $property->name;
             }
         }
@@ -170,40 +175,36 @@ class SchemaFactory
         return $required;
     }
 
-    /**
-     * @return array
-     */
-    public function getExampleArray(string $resourceClass,array $ignoreClasses = []) : array
+    public function getExampleArray(string $resourceClass, array $ignoreClasses = []): array
     {
         $examples = [];
-        foreach ($this->properties as $property){
+        foreach ($this->properties as $property) {
 
-            if(isset($property->schema))
-            {
+            if (isset($property->schema)) {
                 $examples[$property->name] = $property->schema->getExampleArray($resourceClass);
+
                 continue;
             }
 
-            if (isset($property->resource))
-            {
+            if (isset($property->resource)) {
                 // Get the first response body
                 // TODO: validate it exists
-                if (! in_array($property->resource,$ignoreClasses)){
+                if (! in_array($property->resource, $ignoreClasses)) {
                     $body = $property->resource::responseBodies()[0];
                     $ignoreClasses[] = $resourceClass;
-                    if ($property->type === 'array')
-                    {
-                        $examples[$property->name] = [$body->schemaFactory->getExampleArray($property->resource,$ignoreClasses)];
+                    if ($property->type === 'array') {
+                        $examples[$property->name] = [$body->schemaFactory->getExampleArray($property->resource, $ignoreClasses)];
+                    } else {
+                        $examples[$property->name] = $body->schemaFactory->getExampleArray($property->resource, $ignoreClasses);
                     }
-                    else{
-                        $examples[$property->name] = $body->schemaFactory->getExampleArray($property->resource,$ignoreClasses);
-                    }
+
                     continue;
                 }
 
                 // Here if the class is to be ignored
                 // TODO need to come up with alternative ways to handle recursive examples, we could give to option to omit them
                 $examples[$property->name] = '{recursive}';
+
                 continue;
             }
 
