@@ -21,18 +21,30 @@ class ParseFile extends Command
 {
     protected $signature = 'swag:parse {file}';
 
-    /**
-     * @throws ReflectionException
-     */
     public function handle()
     {
         $file = $this->argument('file');
-        $keys = (new ResourceKeyParser($file))->getKeys();
-        dd($keys);
+        $parser = new ResourceKeyParser($file);
+        $keys = $parser->getKeys();
+        $documentedKeys = $parser->getDocumentedKeys();
 
+        $missing = array_diff($keys,$documentedKeys);
+        $overDocumented = array_diff($documentedKeys,$keys);
 
-//        $dumper = new NodeDumper;
-//        echo $dumper->dump($ast) . "\n";
+        // First show missing fields from documentation
+        $missingHeader = sprintf("%s fields missing: ",count($missing));
+        $overDocumentedHeader = sprintf("%s fields documented but not found in list: ",count($overDocumented));
+
+        $this->comment($missingHeader);
+        foreach ($missing as $missingKey){
+            $this->comment(sprintf('     - %s',$missingKey));
+        }
+        $this->newLine();
+        $this->comment($overDocumentedHeader);
+        foreach ($overDocumented as $overDocumentedKey)
+        {
+            $this->comment(sprintf('     + %s',$overDocumentedKey));
+        }
 
     }
 

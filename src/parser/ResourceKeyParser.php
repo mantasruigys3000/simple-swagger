@@ -2,6 +2,11 @@
 
 namespace Mantasruigys3000\SimpleSwagger\parser;
 
+use Mantasruigys3000\SimpleSwagger\data\RequestBody;
+use Mantasruigys3000\SimpleSwagger\data\SchemaFactory;
+use Mantasruigys3000\SimpleSwagger\helpers\ClassHelper;
+use Mantasruigys3000\SimpleSwagger\traits\HasRequestBodies;
+use Mantasruigys3000\SimpleSwagger\traits\HasResponseBodies;
 use PhpParser\NodeFinder;
 use PhpParser\ParserFactory;
 use ReflectionClass;
@@ -11,9 +16,22 @@ class ResourceKeyParser
 {
     protected NodeFinder $finder;
 
+    protected string $functionSignature = '';
+
     public function __construct(protected string $resourceClass)
     {
         $this->finder = new NodeFinder();
+
+        // We need to assign a function signature based on class type
+        // If the class provided is a resource, then we look in the toArray method
+        if (ClassHelper::uses($this->resourceClass,HasResponseBodies::class)){
+            $this->functionSignature = 'toArray';
+        }
+
+        // We should look in the rules method for request bodies
+        if (ClassHelper::uses($this->resourceClass,HasRequestBodies::class)){
+            $this->functionSignature = 'rules';
+        }
     }
 
     public function getKeys() : array
@@ -31,7 +49,7 @@ class ResourceKeyParser
         // Get return expression of the function
         $finder = new NodeFinder();
         $classMethod = $finder->findFirst($ast,function(Node $node) use ($finder){
-            if ( $node instanceof Node\Stmt\ClassMethod && $node->name->toString() === 'toArray')
+            if ( $node instanceof Node\Stmt\ClassMethod && $node->name->toString() === $this->functionSignature)
             {
                 return true;
             }
@@ -41,6 +59,32 @@ class ResourceKeyParser
 
         foreach ($returnExpression as $node){
             $keys = array_merge($keys,$this->getKeysFromExpression($node->expr,$classMethod));
+        }
+
+        return $keys;
+    }
+
+    /**
+     * Get keys that are already documented in this resource
+     *
+     * @return array
+     */
+    public function getDocumentedKeys() : array
+    {
+        if(! ClassHelper::uses($this->resourceClass,HasResponseBodies::class)){
+            return [];
+        }
+
+        // Get bodies
+        /**
+         * @var RequestBody[] $bodies
+         */
+        $bodies = $this->resourceClass::responseBodies();
+
+        $keys = [];
+
+        foreach ($bodies as $body){
+            $keys = array_merge($keys,$body->schemaFactory->getDocumentedKeys());
         }
 
         return $keys;
@@ -100,6 +144,12 @@ class ResourceKeyParser
              */
             if ($assignment->var instanceof Node\Expr\ArrayDimFetch){
                 $keys[] = $assignment->var->dim->value;
+                continue;
+            }
+
+            // For now ignore function calls
+            if ($assignment->expr instanceof Node\Expr\FuncCall)
+            {
                 continue;
             }
 

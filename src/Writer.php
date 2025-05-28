@@ -24,6 +24,7 @@ use Mantasruigys3000\SimpleSwagger\data\SecurityScheme;
 use Mantasruigys3000\SimpleSwagger\enums\SecuritySchemeType;
 use Mantasruigys3000\SimpleSwagger\helpers\ClassHelper;
 use Mantasruigys3000\SimpleSwagger\helpers\ReferenceHelper;
+use Mantasruigys3000\SimpleSwagger\helpers\RouteHelper;
 use Mantasruigys3000\SimpleSwagger\interfaces\JsonResponse;
 use Mantasruigys3000\SimpleSwagger\traits\HasRequestBodies;
 use ReflectionAttribute;
@@ -214,22 +215,7 @@ class Writer
      */
     private function getRoutes(): array
     {
-        $routes = Route::getRoutes()->getRoutes();
-
-        // Filter out unwanted routes
-        $routes = array_filter($routes, function (RouteData $route) {
-
-            // Look through every allowed route, if any accept they allow the route
-            foreach (config('docs.allowed_routes') as $allowedRoute) {
-                if (fnmatch($allowedRoute, $route->uri)) {
-                    return true;
-                }
-            }
-
-            return false;
-        });
-
-        return $routes;
+        return RouteHelper::getRoutes();
     }
 
     /**

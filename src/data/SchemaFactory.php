@@ -233,4 +233,21 @@ class SchemaFactory
 
         return $examples;
     }
+
+    /**
+     * Get all keys documented by this schema factory, useful for finding missing fields
+     *
+     * @return array
+     */
+    public function getDocumentedKeys() : array
+    {
+        $keys = [];
+
+        foreach ($this->properties as $property)
+        {
+            $keys[] = $property->name;
+        }
+
+        return $keys;
+    }
 }
