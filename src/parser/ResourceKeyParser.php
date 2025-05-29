@@ -34,6 +34,22 @@ class ResourceKeyParser
         }
     }
 
+    /**
+     * Parse keys and create an info object
+     *
+     * @return ParseInfo
+     */
+    public function parse() : ParseInfo
+    {
+        $parsedKeys = $this->getKeys();
+        $documentedKeys = $this->getDocumentedKeys();
+
+        $missing = array_diff($parsedKeys,$documentedKeys);
+        $overDocumented = array_diff($documentedKeys,$parsedKeys);
+
+        return new ParseInfo($missing,$overDocumented);
+    }
+
     public function getKeys() : array
     {
         $keys = [];

@@ -26,10 +26,11 @@ use ReflectionClass;
 use ReflectionException;
 use PhpParser\Node;
 use ReflectionMethod;
+use function Laravel\Prompts\select;
 
 class ParseAll extends Command
 {
-    protected $signature = 'swag:parse-all';
+    protected $signature = 'swag:parse-all {--I|interactive}';
 
     /**
      * @throws ReflectionException
@@ -50,6 +51,10 @@ class ParseAll extends Command
             if ($functionName === $controllerClass) {
                 $functionName = '__invoke';
             }
+
+            /*
+             * TODO: extract all of this into methods tha can be used here and in the writer
+             */
 
             $method = new ReflectionMethod($controllerClass, $functionName);
 
@@ -89,12 +94,54 @@ class ParseAll extends Command
             }
         }
 
-        dd($requestClasses,$responseClasses);
-        // Compare all requests
+        $allClasses = array_merge(array_keys($requestClasses),array_keys($responseClasses));
 
-        // Compare all responses
+        foreach ($allClasses as $index => $class)
+        {
+            $this->parse($index,$class);
+        }
 
-        // Final output
+        while ($this->option('interactive'))
+        {
+            $class = (int) $this->ask('inspect class?');
+
+            if ($class === '')
+            {
+                return;
+            }
+
+            dd($class);
+
+            $this->call('swag:parse',[
+                'file' => $allClasses[$class]
+            ]);
+
+        }
+
+    }
+
+    /**
+     * Handle parsing and output for a single class
+     *
+     * @param string $class
+     * @return void
+     */
+    private function parse(int $index, string $class)
+    {
+
+        $info = (new ResourceKeyParser($class))->parse();
+
+        $text = sprintf('%s: %s has %s missing keys and %s over documented keys',$index,addslashes($class),count($info->missingKeys),count($info->overDocumentedKeys));
+        $errors = count($info->missingKeys) + count($info->overDocumentedKeys);
+
+        if ($errors > 0)
+        {
+            $this->warn($text);
+        }
+        else{
+            $this->info($text);
+        }
+
     }
 
 
