@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Middleware\AuthenticateFirm;
-use Mantasruigys3000\SimpleSwagger\data\SecurityScheme;
+use Mantasruigys3000\SimpleSwagger\Data\SecurityScheme;
 
 return [
 
