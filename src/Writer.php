@@ -19,6 +19,7 @@ use Mantasruigys3000\SimpleSwagger\Attributes\ResponseResource;
 use Mantasruigys3000\SimpleSwagger\Attributes\RouteDescription;
 use Mantasruigys3000\SimpleSwagger\Attributes\RouteTag;
 use Mantasruigys3000\SimpleSwagger\Attributes\Security;
+use Mantasruigys3000\SimpleSwagger\Data\RequestContent;
 use Mantasruigys3000\SimpleSwagger\Data\ResponseBody;
 use Mantasruigys3000\SimpleSwagger\Data\SecurityScheme;
 use Mantasruigys3000\SimpleSwagger\Enums\SecuritySchemeType;
@@ -407,10 +408,7 @@ class Writer
                     $bodies = $requestParam::requestBodies();
                     if ($bodies) {
                         $requestClasses[$requestParam] = 1;
-
-                        // TODO support multiple schema types
-                        $body['content']['application/json']['schema']['oneOf'] = ReferenceHelper::getRequestSchemaReferences($requestParam);
-                        $body['content']['application/json']['examples'] = ReferenceHelper::getRequestExampleReferences($requestParam);
+                        $body = (new RequestContent($requestParam))->toArray();
                     }
                     // the content should consist of references to request schemas
                 } else {

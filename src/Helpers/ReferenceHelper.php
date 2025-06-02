@@ -68,6 +68,23 @@ class ReferenceHelper
         return $exampleRefs;
     }
 
+    public static function getRequestBodyReference(RequestBody $body,string $resourceClass): string
+    {
+        return '#/components/schemas/' . ReferenceHelper::getRequestID($body,$resourceClass);
+    }
+
+    /**
+     * Get request body example reference
+     *
+     * @param RequestBody $body
+     * @param string $resourceClass
+     * @return string
+     */
+    public static function getRequestBodyExampleReference(RequestBody $body, string $resourceClass) : string
+    {
+        return '#/components/examples/' . ReferenceHelper::getRequestExampleID($body,$resourceClass);
+    }
+
     public static function getRequestSchemaReferences(string $resourceClass) : array
     {
         $bodies = $resourceClass::requestBodies();
@@ -75,10 +92,24 @@ class ReferenceHelper
         $schemaRefs = [];
 
         foreach ($bodies as $body){
-            $schemaRefs[] = ['$ref' => '#/components/schemas/' . ReferenceHelper::getRequestID($body,$resourceClass)];
+            $schemaRefs[] = ['$ref' => self::getRequestBodyReference($body,$resourceClass)];
         }
 
         return $schemaRefs;
+    }
+
+    public static function getRequestSchemaContentType(string $resourceClass) : array
+    {
+        $types = [];
+
+        $bodies = $resourceClass::requestBodies();
+
+        foreach ($bodies as $body){
+            $id = ReferenceHelper::getRequestID($body,$resourceClass);
+            $types[$id] = 'application/json';
+        }
+
+        return $types;
     }
 
     public static function getRequestExampleReferences(string $resourceClass) : array
@@ -88,7 +119,7 @@ class ReferenceHelper
         $exampleRefs = [];
 
         foreach ($bodies as $body){
-            $exampleRefs[$body->title] = ['$ref' => '#/components/examples/' . ReferenceHelper::getRequestExampleID($body,$resourceClass)];
+            $exampleRefs[$body->title] = ['$ref' => self::getRequestBodyExampleReference($body,$resourceClass)];
         }
 
         return $exampleRefs;

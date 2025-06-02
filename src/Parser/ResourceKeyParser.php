@@ -2,6 +2,7 @@
 
 namespace Mantasruigys3000\SimpleSwagger\Parser;
 
+use Illuminate\Support\Str;
 use Mantasruigys3000\SimpleSwagger\Data\RequestBody;
 use Mantasruigys3000\SimpleSwagger\Data\SchemaFactory;
 use Mantasruigys3000\SimpleSwagger\Helpers\ClassHelper;
@@ -17,6 +18,7 @@ class ResourceKeyParser
     protected NodeFinder $finder;
 
     protected string $functionSignature = '';
+    protected string $bodiesFunctionSignature = '';
 
     public function __construct(protected string $resourceClass)
     {
@@ -26,11 +28,13 @@ class ResourceKeyParser
         // If the class provided is a resource, then we look in the toArray method
         if (ClassHelper::uses($this->resourceClass,HasResponseBodies::class)){
             $this->functionSignature = 'toArray';
+            $this->bodiesFunctionSignature = 'responseBodies';
         }
 
         // We should look in the rules method for request bodies
         if (ClassHelper::uses($this->resourceClass,HasRequestBodies::class)){
             $this->functionSignature = 'rules';
+            $this->bodiesFunctionSignature = 'requestBodies';
         }
     }
 
@@ -77,6 +81,7 @@ class ResourceKeyParser
             $keys = array_merge($keys,$this->getKeysFromExpression($node->expr,$classMethod));
         }
 
+
         return $keys;
     }
 
@@ -87,7 +92,7 @@ class ResourceKeyParser
      */
     public function getDocumentedKeys() : array
     {
-        if(! ClassHelper::uses($this->resourceClass,HasResponseBodies::class)){
+        if ($this->bodiesFunctionSignature === ''){
             return [];
         }
 
@@ -95,7 +100,8 @@ class ResourceKeyParser
         /**
          * @var RequestBody[] $bodies
          */
-        $bodies = $this->resourceClass::responseBodies();
+        $function = $this->bodiesFunctionSignature;
+        $bodies = $this->resourceClass::$function();
 
         $keys = [];
 
@@ -114,11 +120,20 @@ class ResourceKeyParser
      */
     private function getKeysFromExpression(Node\Expr $expression,$functionAst) : array
     {
-        return match ($expression::class)
+        $keys = match ($expression::class)
         {
             Node\Expr\Array_::class => $this->getKeysFromArrayExpression($expression),
             Node\Expr\Variable::class => $this->getKeysFromVariableExpression($expression->name,$functionAst),
         };
+
+        // We should filter any '.' in a key name and merge it
+
+        foreach ($keys as $index => $key)
+        {
+            $keys[$index] = Str::before($key,'.');
+        }
+
+        return $keys;
     }
 
     private function getKeysFromArrayExpression($ast) : array

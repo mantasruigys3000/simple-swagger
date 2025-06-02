@@ -31,7 +31,14 @@ use function Laravel\Prompts\select;
 
 class ParseAll extends Command
 {
-    protected $signature = 'swag:parse-all {--I|interactive}';
+    protected $signature = 'swag:parse-all {--I|interactive} {--L|log}';
+
+    /**
+     * Map of classes and error counts
+     *
+     * @var array
+     */
+    protected $errorCount = [];
 
     /**
      * @throws ReflectionException
@@ -60,13 +67,23 @@ class ParseAll extends Command
 
         $allClasses = array_merge(array_keys($requestClasses),array_keys($responseClasses));
 
-        foreach ($allClasses as $index => $class)
-        {
+        foreach ($allClasses as $index => $class) {
             $this->parse($index,$class);
         }
 
-        while ($this->option('interactive'))
-        {
+        if ($this->option('log')) {
+            foreach ($allClasses as $class) {
+                if ($this->errorCount[$class] > 0){
+                    $this->call('swag:parse',[
+                        'file' => $class
+                    ]);
+                }
+            }
+
+        }
+
+        while ($this->option('interactive')) {
+
             $class = $this->ask('inspect class?');
 
             if (is_null($class))
@@ -95,6 +112,12 @@ class ParseAll extends Command
         $text = sprintf('%s: %s has %s missing keys and %s over documented keys',$index,addslashes($class),count($info->missingKeys),count($info->overDocumentedKeys));
         $errors = count($info->missingKeys) + count($info->overDocumentedKeys);
 
+        $this->errorCount[$class] = $errors;
+
+        if ($this->isLogMode()){
+            return;
+        }
+
         if ($errors > 0)
         {
             $this->warn($text);
@@ -103,5 +126,15 @@ class ParseAll extends Command
             $this->info($text);
         }
 
+    }
+
+    /**
+     * Is in Log Mode
+     *
+     * @return bool
+     */
+    private function isLogMode() : bool
+    {
+        return $this->option('log');
     }
 }

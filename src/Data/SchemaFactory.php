@@ -12,6 +12,13 @@ use Mantasruigys3000\SimpleSwagger\helpers\ReferenceHelper;
 class SchemaFactory
 {
     /**
+     * Content Type
+     *
+     * @var string
+     */
+    private string $contentType = 'application/json';
+
+    /**
      * @var SchemaProperty[]
      */
     public array $properties = [];
@@ -70,6 +77,12 @@ class SchemaFactory
         $property->resource = $class;
 
         return $property;
+    }
+
+    public function file(string $name,string $description)
+    {
+        $this->contentType = 'multipart/form-data';
+        return $this->addProperty($name,'string',$description)->example('file content --abcde12345--')->format('binary');
     }
 
     private function addProperty(string $name, string $type, string $description): SchemaProperty
@@ -232,6 +245,16 @@ class SchemaFactory
         }
 
         return $examples;
+    }
+
+    /**
+     * Get Content Type
+     *
+     * @return string
+     */
+    public function getContentType() : string
+    {
+        return $this->contentType;
     }
 
     /**

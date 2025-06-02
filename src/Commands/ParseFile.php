@@ -35,15 +35,22 @@ class ParseFile extends Command
         $missingHeader = sprintf("%s fields missing: ",count($missing));
         $overDocumentedHeader = sprintf("%s fields documented but not found in list: ",count($overDocumented));
 
-        $this->comment($missingHeader);
-        foreach ($missing as $missingKey){
-            $this->comment(sprintf('     - %s',$missingKey));
+        $this->info(sprintf("Processing %s: \n",$file));
+
+        if (count($missing) > 0){
+            $this->comment($missingHeader);
+            foreach ($missing as $missingKey){
+                $this->comment(sprintf('     - %s',$missingKey));
+            }
+            $this->newLine();
         }
-        $this->newLine();
-        $this->comment($overDocumentedHeader);
-        foreach ($overDocumented as $overDocumentedKey)
-        {
-            $this->comment(sprintf('     + %s',$overDocumentedKey));
+
+        if (count($overDocumented) > 0) {
+            $this->comment($overDocumentedHeader);
+            foreach ($overDocumented as $overDocumentedKey)
+            {
+                $this->comment(sprintf('     + %s',$overDocumentedKey));
+            }
         }
 
     }
