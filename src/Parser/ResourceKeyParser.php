@@ -124,6 +124,7 @@ class ResourceKeyParser
         {
             Node\Expr\Array_::class => $this->getKeysFromArrayExpression($expression),
             Node\Expr\Variable::class => $this->getKeysFromVariableExpression($expression->name,$functionAst),
+            default => [],
         };
 
         // We should filter any '.' in a key name and merge it
