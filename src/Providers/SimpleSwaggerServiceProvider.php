@@ -4,9 +4,9 @@ namespace Mantasruigys3000\SimpleSwagger\Providers;
 
 use Carbon\Laravel\ServiceProvider;
 use Illuminate\Support\Facades\Config;
-use Mantasruigys3000\SimpleSwagger\commands\GenerateDoc;
-use Mantasruigys3000\SimpleSwagger\commands\ParseAll;
-use Mantasruigys3000\SimpleSwagger\commands\ParseFile;
+use Mantasruigys3000\SimpleSwagger\Commands\GenerateDoc;
+use Mantasruigys3000\SimpleSwagger\Commands\ParseAll;
+use Mantasruigys3000\SimpleSwagger\Commands\ParseFile;
 
 class SimpleSwaggerServiceProvider extends ServiceProvider
 {
