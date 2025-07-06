@@ -21,7 +21,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "Mantasruigys3000\\SimpleSwagger\\providers\\SimpleSwaggerServiceProvider"
+                "Mantasruigys3000\\SimpleSwagger\\Providers\\SimpleSwaggerServiceProvider"
             ]
         }
     },
