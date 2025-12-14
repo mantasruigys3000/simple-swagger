@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Mantasruigys3000\SimpleSwagger\Helpers;
 
+use Mantasruigys3000\SimpleSwagger\Traits\HasResponseBodies;
+
 class ClassHelper
 {
     /**
@@ -24,5 +26,10 @@ class ClassHelper
     public static function uses(string $class,string $trait)
     {
         return in_array($trait,class_uses($class));
+    }
+
+    public static function hasResponseBodies(string $class) : bool
+    {
+        return (method_exists($class,'responseBodies') || static::uses($class,HasResponseBodies::class));
     }
 }

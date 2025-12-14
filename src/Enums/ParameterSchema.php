@@ -10,6 +10,8 @@ enum ParameterSchema : string
     case STRING = 'string';
     case UUID = 'uuid';
 
+    case DATE = 'date';
+
     public function getPrimitiveType(): string
     {
         return match ($this){
@@ -37,6 +39,7 @@ enum ParameterSchema : string
     {
         return match ($this){
             self::UUID => Str::uuid()->toString(),
+            self::DATE => now()->toDateString(),
             default => null,
         };
     }

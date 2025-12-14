@@ -6,6 +6,7 @@ namespace Mantasruigys3000\SimpleSwagger\Data;
 
 use Exception;
 use Illuminate\Support\Str;
+use Mantasruigys3000\SimpleSwagger\Helpers\ClassHelper;
 use Mantasruigys3000\SimpleSwagger\helpers\EnumHelper;
 use Mantasruigys3000\SimpleSwagger\helpers\ReferenceHelper;
 
@@ -58,6 +59,17 @@ class SchemaFactory
     public function datetime(string $name, string $description)
     {
         return $this->addProperty($name, 'string', $description)->example(now()->toIso8601String())->format('date-time');
+    }
+
+    /**
+     * Fast helper for created_at and updated_at
+     *
+     * @return void
+     */
+    public function timestamps(string $resource)
+    {
+        $this->datetime('created_at',sprintf('datetime %s was created',$resource));
+        $this->datetime('updated_at',sprintf('datetime %s was updated',$resource));
     }
 
     public function object(string $name, string $description, callable $function)

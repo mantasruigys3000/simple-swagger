@@ -28,6 +28,7 @@ use Mantasruigys3000\SimpleSwagger\Helpers\ReferenceHelper;
 use Mantasruigys3000\SimpleSwagger\Helpers\RouteHelper;
 use Mantasruigys3000\SimpleSwagger\Interfaces\JsonResponse;
 use Mantasruigys3000\SimpleSwagger\Traits\HasRequestBodies;
+use Mantasruigys3000\SimpleSwagger\Traits\HasResponseBodies;
 use ReflectionAttribute;
 use ReflectionClass;
 use ReflectionMethod;
@@ -38,6 +39,8 @@ class Writer
     public Closure $errorCallback;
 
     public Closure $infoCallback;
+
+    public Closure $fatalCallback;
 
     public function __construct() {}
 
@@ -276,10 +279,13 @@ class Writer
                 $hasOkay = true;
             }
 
-            $responses[$status] = $responseObject->toArray();
-
             if ($responseObject instanceof ResponseResource) {
-                // TODO: validate the resource class implements the trait or at least implements the function
+
+                if (!method_exists($responseObject->resourceClass,"responseBodies"))
+                {
+                    $this->fatal(sprintf("Response class %s does not implement method responseBodies",$responseObject->resourceClass));
+                    continue;
+                }
 
                 // Using the class names as the key forces each entry to be unique, the value associated with it is not used
                 $responseClasses[$responseObject->resourceClass] = 1;
@@ -288,6 +294,8 @@ class Writer
                     $responseCollections[$responseObject->resourceClass] = 1;
                 }
             }
+
+            $responses[$status] = $responseObject->toArray();
 
             if ($responseObject instanceof ResponseJson) {
                 $responseClasses[$responseObject->jsonResponse] = 1;
@@ -483,5 +491,14 @@ class Writer
         }
 
         ($this->infoCallback)($info);
+    }
+
+    private function fatal(string $error)
+    {
+        if (! isset($this->fatalCallback)) {
+            return;
+        }
+
+        ($this->fatalCallback)($error);
     }
 }

@@ -24,6 +24,7 @@ class GenerateDoc extends Command
         // Register callbacks
         $writer->infoCallback = fn(string $info) => $this->info($info);
         $writer->errorCallback = fn(string $info) => $this->warn($info);
+        $writer->fatalCallback = fn(string $info) => $this->error($info);
 
         $output = $writer->write();
 
